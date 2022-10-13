@@ -27,6 +27,7 @@ bin/
 .idea/compiler.xml
 .idea/modules
 .idea/libraries
+.idea/
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
