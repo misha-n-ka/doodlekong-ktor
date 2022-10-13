@@ -22,6 +22,12 @@ bin/
 *.iml
 *.ipr
 .idea/misc.xml
+.idea/git_toolbox_prj.xml
+.idea/modules.xml
+.idea/compiler.xml
+.idea/modules
+.idea/libraries
+.idea/
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
