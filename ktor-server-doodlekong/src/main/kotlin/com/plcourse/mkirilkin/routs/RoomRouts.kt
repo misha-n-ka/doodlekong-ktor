@@ -3,6 +3,7 @@ package com.plcourse.mkirilkin.routs
 import com.plcourse.mkirilkin.data.Room
 import com.plcourse.mkirilkin.data.models.BasicApiResponse
 import com.plcourse.mkirilkin.data.models.CreateRoomRequest
+import com.plcourse.mkirilkin.data.models.RoomResponse
 import com.plcourse.mkirilkin.server
 import com.plcourse.mkirilkin.util.Constants
 import io.ktor.application.*
@@ -52,6 +53,27 @@ fun Route.createRoomRoute() {
                 HttpStatusCode.OK,
                 BasicApiResponse(true, "Room was created successfully")
             )
+        }
+    }
+}
+
+fun Route.getRoomsRoute() {
+    route("api/getRooms") {
+        get {
+            val searchQuery = call.parameters["searchQuery"]
+            if (searchQuery == null) {
+                call.respond(HttpStatusCode.BadRequest)
+                return@get
+            }
+
+            val roomResult = server.rooms.filterKeys {
+                it.contains(searchQuery, ignoreCase = true)
+            }
+            val roomResponse = roomResult.values.map {
+                RoomResponse(it.name, it.maxPlayers, it.players.size)
+            }.sortedBy { it.name }
+
+            call.respond(HttpStatusCode.OK, roomResponse)
         }
     }
 }
