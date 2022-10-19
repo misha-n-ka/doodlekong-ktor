@@ -1,5 +1,6 @@
-package com.plcourse.mkirilkin.data.models
+package com.plcourse.mkirilkin.data.models.messages
 
+import com.plcourse.mkirilkin.data.models.messages.BaseModel
 import com.plcourse.mkirilkin.util.Constants.TYPE_DRAW_DATA
 
 data class DrawData(

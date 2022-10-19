@@ -1,5 +1,7 @@
 package com.plcourse.mkirilkin.data
 
+import com.plcourse.mkirilkin.data.models.messages.Announcement
+import com.plcourse.mkirilkin.gson
 import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.isActive
 
@@ -21,8 +23,8 @@ class Room(
         }
 
     init {
-        setPhaseChangedListener {newPhase ->
-            when(newPhase) {
+        setPhaseChangedListener { newPhase ->
+            when (newPhase) {
                 Phase.WAITING_FOR_PLAYERS -> waitingForPlayers()
                 Phase.WAITING_FOR_START -> waitingForStart()
                 Phase.NEW_ROUND -> newRound()
@@ -50,6 +52,32 @@ class Room(
                 player.socket.send(Frame.Text(message))
             }
         }
+    }
+
+    suspend fun addPlayer(clientId: String, userName: String, socket: WebSocketSession): Player {
+        val player = Player(userName, socket, clientId)
+        players = players + player
+
+        if (players.size == 1) { // Единственный кто зашел в команту
+            phase = Phase.WAITING_FOR_PLAYERS
+        } else if (players.size == 2 && phase == Phase.WAITING_FOR_PLAYERS) {
+            // При двух игроках в комнате ждем начала игры
+            phase = Phase.WAITING_FOR_START
+            players = players.shuffled()
+        } else if (phase == Phase.WAITING_FOR_START && players.size == maxPlayers) {
+            phase = Phase.NEW_ROUND
+            players = players.shuffled()
+        }
+
+        val announcement = Announcement(
+            "$userName joined the party!",
+            System.currentTimeMillis(),
+            Announcement.TYPE_PLAYER_JOINED
+        )
+
+        broadcast(gson.toJson(announcement))
+
+        return player
     }
 
     fun containsPlayer(username: String): Boolean {
