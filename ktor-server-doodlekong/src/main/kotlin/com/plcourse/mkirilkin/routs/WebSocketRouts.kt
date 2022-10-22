@@ -9,6 +9,7 @@ import com.plcourse.mkirilkin.server
 import com.plcourse.mkirilkin.session.DrawingSession
 import com.plcourse.mkirilkin.util.Constants.TYPE_ANNOUNCEMENT
 import com.plcourse.mkirilkin.util.Constants.TYPE_CHAT_MESSAGE
+import com.plcourse.mkirilkin.util.Constants.TYPE_CHOSEN_WORD
 import com.plcourse.mkirilkin.util.Constants.TYPE_DRAW_DATA
 import com.plcourse.mkirilkin.util.Constants.TYPE_JOIN_ROOM_HANDSHAKE
 import com.plcourse.mkirilkin.util.Constants.TYPE_PHASE_CHANGE
@@ -47,6 +48,11 @@ fun Route.gameWebSocketRoute() {
                     }
                 }
 
+                is ChosenWord -> {
+                    val room = server.rooms[payload.roomName] ?: return@standardWebSocket
+                    room.setWordAndSwitchToGameRunning(payload.chosenWord)
+                }
+
                 is ChatMessage -> {
 
                 }
@@ -82,6 +88,7 @@ fun Route.standardWebSocket(
                         TYPE_ANNOUNCEMENT -> Announcement::class.java
                         TYPE_JOIN_ROOM_HANDSHAKE -> JoinRoomHandshake::class.java
                         TYPE_PHASE_CHANGE -> PhaseChange::class.java
+                        TYPE_CHOSEN_WORD -> ChosenWord::class.java
                         else -> BaseModel::class.java
                     }
                     val payload = gson.fromJson(message, type)
