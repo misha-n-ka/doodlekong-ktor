@@ -2,8 +2,11 @@ package com.plcourse.mkirilkin.data
 
 import com.plcourse.mkirilkin.data.models.messages.Announcement
 import com.plcourse.mkirilkin.data.models.messages.ChosenWord
+import com.plcourse.mkirilkin.data.models.messages.GameState
 import com.plcourse.mkirilkin.data.models.messages.PhaseChange
 import com.plcourse.mkirilkin.gson
+import com.plcourse.mkirilkin.util.transformToUnderscores
+import com.plcourse.mkirilkin.util.words
 import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.*
 
@@ -17,6 +20,7 @@ class Room(
     private var drawingPlayer: Player? = null
     private var winningPlayers = listOf<String>()
     private var word: String? = null
+    private var curWords: List<String>? = null
 
     private var phaseChangedListener: ((Phase) -> Unit)? = null
     var phase = Phase.WAITING_FOR_PLAYERS
@@ -148,7 +152,29 @@ class Room(
     }
 
     private fun gameRunning() {
+        winningPlayers = listOf()
+        val nullSafetyPlayer = players.random()
+        val wordToSend = word ?: curWords?.random() ?: words.random()
+        val wordWithUnderscores = wordToSend.transformToUnderscores()
+        val drawingUsername = (drawingPlayer ?: nullSafetyPlayer).userName
+        val gameStateForDrawingPlayer = GameState(
+            drawingUsername,
+            wordToSend
+        )
+        val gameStateForGuessingPlayers = GameState(
+            drawingUsername,
+            wordWithUnderscores
+        )
+        GlobalScope.launch {
+            broadcastToAllExcept(
+                gson.toJson(gameStateForGuessingPlayers),
+                (drawingPlayer ?: nullSafetyPlayer).clientId
+            )
+            drawingPlayer?.socket?.send(Frame.Text(gson.toJson(gameStateForDrawingPlayer)))
 
+            timeAndNotifyNextPhase(DELAY_GAME_RUNNING_TO_SHOW_WORD)
+            println("Drawing phase in room $name started. It'll last ${DELAY_GAME_RUNNING_TO_SHOW_WORD / 1_000}s")
+        }
     }
 
     private fun showWord() {
