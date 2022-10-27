@@ -74,8 +74,8 @@ fun Route.standardWebSocket(
     ) -> Unit
 ) {
     webSocket {
-        val sessions = call.sessions.get<DrawingSession>()
-        if (sessions == null) {
+        val session = call.sessions.get<DrawingSession>()
+        if (session == null) {
             close(
                 CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session")
             )
@@ -97,13 +97,20 @@ fun Route.standardWebSocket(
                         else -> BaseModel::class.java
                     }
                     val payload = gson.fromJson(message, type)
-                    handleFrame(this, sessions.clientId, message, payload)
+                    handleFrame(this, session.clientId, message, payload)
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
             // Handle disconnects
+            val playerWithClientId = server.getRoomWithClientId(session.clientId)
+                ?.players
+                ?.find { it.clientId == session.clientId }
+
+            if (playerWithClientId != null) {
+                server.playerLeft(session.clientId, false)
+            }
         }
     }
 }
