@@ -96,6 +96,40 @@ class Room(
         phase = Phase.GAME_RUNNING
     }
 
+    suspend fun checkWordAndNotifyPlayers(message: ChatMessage): Boolean {
+        if (isGuessCorrect(message)) {
+            val guessingTime = System.currentTimeMillis() - startTime
+            val timePercentageLeft = 1f - guessingTime.toFloat() / DELAY_GAME_RUNNING_TO_SHOW_WORD
+            val score = GUESS_SCORE_DEFAULT + GUESS_SCORE_PERCENTAGE_MULTIPLIER * timePercentageLeft
+            val player = players.find { it.userName == message.from }
+
+            player?.let {
+                it.score += score.toInt()
+            }
+            drawingPlayer?.let {
+                it.score += GUESS_SCORE_FOR_DRAWING_PLAYER / players.size
+            }
+
+            val announcement = Announcement(
+                "${message.from} has guessed it!",
+                System.currentTimeMillis(),
+                announcementType = Announcement.TYPE_PLAYER_GUESSES_WORD
+            )
+            broadcast(gson.toJson(announcement))
+            val isRoundOver = addWinningPlayer(message.from)
+            if (isRoundOver) {
+                val roundOverAnnouncement = Announcement(
+                    "Everybody guessed it! New round is starting...",
+                    System.currentTimeMillis(),
+                    Announcement.TYPE_EVERYBODY_GUESSED_IT
+                )
+                broadcast(gson.toJson(roundOverAnnouncement))
+            }
+            return true
+        }
+        return false
+    }
+
     private fun setPhaseChangedListener(listener: (Phase) -> Unit) {
         phaseChangedListener = listener
     }
@@ -234,38 +268,30 @@ class Room(
         return false
     }
 
-    suspend fun checkWordAndNotifyPlayers(message: ChatMessage): Boolean {
-        if (isGuessCorrect(message)) {
-            val guessingTime = System.currentTimeMillis() - startTime
-            val timePercentageLeft = 1f - guessingTime.toFloat() / DELAY_GAME_RUNNING_TO_SHOW_WORD
-            val score = GUESS_SCORE_DEFAULT + GUESS_SCORE_PERCENTAGE_MULTIPLIER * timePercentageLeft
-            val player = players.find { it.userName == message.from }
-
-            player?.let {
-                it.score += score.toInt()
-            }
-            drawingPlayer?.let {
-                it.score += GUESS_SCORE_FOR_DRAWING_PLAYER / players.size
-            }
-
-            val announcement = Announcement(
-                "${message.from} has guessed it!",
-                System.currentTimeMillis(),
-                announcementType = Announcement.TYPE_PLAYER_GUESSES_WORD
-            )
-            broadcast(gson.toJson(announcement))
-            val isRoundOver = addWinningPlayer(message.from)
-            if (isRoundOver) {
-                val roundOverAnnouncement = Announcement(
-                    "Everybody guessed it! New round is starting...",
-                    System.currentTimeMillis(),
-                    Announcement.TYPE_EVERYBODY_GUESSED_IT
-                )
-                broadcast(gson.toJson(roundOverAnnouncement))
-            }
-            return true
+    private suspend fun sendWordToPlayer(player: Player) {
+        val delay = when(phase) {
+            Phase.WAITING_FOR_START -> DElAY_WAITING_FOR_START_TO_NEW_ROUND
+            Phase.NEW_ROUND -> DELAY_NEW_ROUND_TO_GAME_RUNNING
+            Phase.GAME_RUNNING -> DELAY_GAME_RUNNING_TO_SHOW_WORD
+            Phase.SHOW_WORD -> DELAY_SHOW_WORD_TO_NEW_ROUND
+            else -> 0L
         }
-        return false
+        val phaseChange = PhaseChange(phase, delay, drawingPlayer?.userName)
+
+        word?.let { currentWord ->
+            drawingPlayer?.let { drawingPlayer ->
+                val gameState = GameState(
+                    drawingPlayer.userName,
+                    if (player.isDrawing || phase == Phase.SHOW_WORD) {
+                        currentWord
+                    } else {
+                        currentWord.transformToUnderscores()
+                    }
+                )
+                player.socket.send(Frame.Text(gson.toJson(gameState)))
+            }
+        }
+        player.socket.send(Frame.Text(gson.toJson(phaseChange)))
     }
 
     enum class Phase {
