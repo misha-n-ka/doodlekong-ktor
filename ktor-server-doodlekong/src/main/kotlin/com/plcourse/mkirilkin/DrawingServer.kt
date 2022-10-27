@@ -25,4 +25,13 @@ class DrawingServer {
             filteredRooms.values.toList().first()
         }
     }
+
+    fun playerLeft(clientId: String, immediatelyDisconnect: Boolean = false) {
+        val playersRoom = getRoomWithClientId(clientId)
+        if (immediatelyDisconnect) {
+            println("Closing connection to ${players[clientId]?.userName}")
+            playersRoom?.removePlayer(clientId)
+            players.remove(clientId)
+        }
+    }
 }
