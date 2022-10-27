@@ -1,10 +1,8 @@
 package com.plcourse.mkirilkin.data
 
-import com.plcourse.mkirilkin.data.models.messages.Announcement
-import com.plcourse.mkirilkin.data.models.messages.ChosenWord
-import com.plcourse.mkirilkin.data.models.messages.GameState
-import com.plcourse.mkirilkin.data.models.messages.PhaseChange
+import com.plcourse.mkirilkin.data.models.messages.*
 import com.plcourse.mkirilkin.gson
+import com.plcourse.mkirilkin.util.getRandomWords
 import com.plcourse.mkirilkin.util.transformToUnderscores
 import com.plcourse.mkirilkin.util.words
 import io.ktor.http.cio.websocket.*
@@ -21,6 +19,7 @@ class Room(
     private var winningPlayers = listOf<String>()
     private var word: String? = null
     private var curWords: List<String>? = null
+    private var drawingPlayerIndex = 0
 
     private var phaseChangedListener: ((Phase) -> Unit)? = null
     var phase = Phase.WAITING_FOR_PLAYERS
@@ -148,7 +147,13 @@ class Room(
     }
 
     private fun newRound() {
-
+        curWords = getRandomWords(3)
+        val newWords = NewWords(curWords.orEmpty())
+        nextDrawingPlayer()
+        GlobalScope.launch {
+            drawingPlayer?.socket?.send(Frame.Text(gson.toJson(newWords)))
+            timeAndNotifyNextPhase(DELAY_NEW_ROUND_TO_GAME_RUNNING)
+        }
     }
 
     private fun gameRunning() {
@@ -192,6 +197,23 @@ class Room(
             timeAndNotifyNextPhase(DELAY_SHOW_WORD_TO_NEW_ROUND)
             val phaseChange = PhaseChange(Phase.SHOW_WORD, DELAY_SHOW_WORD_TO_NEW_ROUND)
             broadcast(gson.toJson(phaseChange))
+        }
+    }
+
+    private fun nextDrawingPlayer() {
+        drawingPlayer?.isDrawing = false
+        if (players.isEmpty()) return
+
+        drawingPlayer = if (drawingPlayerIndex <= players.size - 1) {
+            players[drawingPlayerIndex]
+        } else {
+            players.last()
+        }
+
+        if (drawingPlayerIndex < players.size - 1) {
+            drawingPlayerIndex++
+        } else {
+            drawingPlayerIndex = 0
         }
     }
 
