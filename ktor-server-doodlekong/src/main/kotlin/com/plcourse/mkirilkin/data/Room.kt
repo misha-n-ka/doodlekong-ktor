@@ -81,10 +81,17 @@ class Room(
             System.currentTimeMillis(),
             Announcement.TYPE_PLAYER_JOINED
         )
-
+        sendWordToPlayer(player)
+        broadcastPlayerStates()
         broadcast(gson.toJson(announcement))
 
         return player
+    }
+
+    fun removePlayer(clientId: String) {
+        GlobalScope.launch {
+            broadcastPlayerStates()
+        }
     }
 
     fun containsPlayer(username: String): Boolean {
@@ -109,6 +116,7 @@ class Room(
             drawingPlayer?.let {
                 it.score += GUESS_SCORE_FOR_DRAWING_PLAYER / players.size
             }
+            broadcastPlayerStates()
 
             val announcement = Announcement(
                 "${message.from} has guessed it!",
@@ -187,6 +195,7 @@ class Room(
         val newWords = NewWords(curWords.orEmpty())
         nextDrawingPlayer()
         GlobalScope.launch {
+            broadcastPlayerStates()
             drawingPlayer?.socket?.send(Frame.Text(gson.toJson(newWords)))
             timeAndNotifyNextPhase(DELAY_NEW_ROUND_TO_GAME_RUNNING)
         }
@@ -225,7 +234,7 @@ class Room(
                     it.score -= PENALTY_NOBODY_GUESSED_IT
                 }
             }
-
+            broadcastPlayerStates()
             word?.let {
                 val chosenWord = ChosenWord(it, name)
                 broadcast(gson.toJson(chosenWord))
@@ -268,8 +277,20 @@ class Room(
         return false
     }
 
+    private suspend fun broadcastPlayerStates() {
+        val playersList = players
+            .sortedByDescending { it.score }
+            .map {
+                PlayerData(it.userName, it.isDrawing, it.score, it.rank)
+            }
+        playersList.forEachIndexed { index, playerData ->
+            playerData.rank = index + 1
+        }
+        broadcast(gson.toJson(PlayersList(playersList)))
+    }
+
     private suspend fun sendWordToPlayer(player: Player) {
-        val delay = when(phase) {
+        val delay = when (phase) {
             Phase.WAITING_FOR_START -> DElAY_WAITING_FOR_START_TO_NEW_ROUND
             Phase.NEW_ROUND -> DELAY_NEW_ROUND_TO_GAME_RUNNING
             Phase.GAME_RUNNING -> DELAY_GAME_RUNNING_TO_SHOW_WORD
