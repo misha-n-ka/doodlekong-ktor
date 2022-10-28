@@ -11,6 +11,7 @@ class DrawingServer {
 
     fun playerJoined(player: Player) {
         players[player.clientId] = player
+        player.startPinging()
     }
 
     fun getRoomWithClientId(clientId: String): Room? {

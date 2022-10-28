@@ -14,6 +14,7 @@ import com.plcourse.mkirilkin.util.Constants.TYPE_DRAW_DATA
 import com.plcourse.mkirilkin.util.Constants.TYPE_GAME_STATE
 import com.plcourse.mkirilkin.util.Constants.TYPE_JOIN_ROOM_HANDSHAKE
 import com.plcourse.mkirilkin.util.Constants.TYPE_PHASE_CHANGE
+import com.plcourse.mkirilkin.util.Constants.TYPE_PING
 import io.ktor.http.cio.websocket.*
 import io.ktor.routing.*
 import io.ktor.sessions.*
@@ -39,6 +40,10 @@ fun Route.gameWebSocketRoute() {
                     server.playerJoined(player)
                     if (!room.containsPlayer(player.userName)) {
                         room.addPlayer(player.clientId, player.userName, socket)
+                    } else {
+                        val playerInRoom = room.players.find { it.clientId == clientId }
+                        playerInRoom?.socket = socket
+                        playerInRoom?.startPinging()
                     }
                 }
 
@@ -59,6 +64,10 @@ fun Route.gameWebSocketRoute() {
                     if (!room.checkWordAndNotifyPlayers(payload)) {
                         room.broadcast(message)
                     }
+                }
+
+                is Ping -> {
+                    server.players[clientId]?.receivedPong()
                 }
             }
         }
@@ -94,6 +103,7 @@ fun Route.standardWebSocket(
                         TYPE_PHASE_CHANGE -> PhaseChange::class.java
                         TYPE_CHOSEN_WORD -> ChosenWord::class.java
                         TYPE_GAME_STATE -> GameState::class.java
+                        TYPE_PING -> Ping::class.java
                         else -> BaseModel::class.java
                     }
                     val payload = gson.fromJson(message, type)
