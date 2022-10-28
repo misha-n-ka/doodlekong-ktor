@@ -29,6 +29,8 @@ class Room(
     private var curRoundDrawData: List<String> = listOf()
 
     private var phaseChangedListener: ((Phase) -> Unit)? = null
+    var lastDrawData: DrawData? = null
+
     var phase = Phase.WAITING_FOR_PLAYERS
         set(value) {
             synchronized(field) {
@@ -220,9 +222,15 @@ class Room(
             }
             phase = when (phase) {
                 Phase.WAITING_FOR_PLAYERS -> Phase.NEW_ROUND
-                Phase.GAME_RUNNING -> Phase.SHOW_WORD
+                Phase.GAME_RUNNING -> {
+                    finishOffDrawing()
+                    Phase.SHOW_WORD
+                }
                 Phase.SHOW_WORD -> Phase.NEW_ROUND
-                Phase.NEW_ROUND -> Phase.GAME_RUNNING
+                Phase.NEW_ROUND -> {
+                    word = null
+                    Phase.GAME_RUNNING
+                }
                 else -> Phase.WAITING_FOR_PLAYERS
             }
         }
@@ -378,6 +386,15 @@ class Room(
     private suspend fun sendCurRoundDrawInfoToPlayer(player: Player) {
         if (phase == Phase.GAME_RUNNING || phase == Phase.SHOW_WORD) {
             player.socket.send(Frame.Text(gson.toJson(RoundDrawInfo(curRoundDrawData))))
+        }
+    }
+
+    private suspend fun finishOffDrawing() {
+        lastDrawData?.let {
+            if (curRoundDrawData.isNotEmpty() && it.motionEvent == 2) {
+                val finishDrawData = it.copy(motionEvent = 1)
+                broadcast(gson.toJson(finishDrawData))
+            }
         }
     }
 
