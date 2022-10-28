@@ -26,6 +26,7 @@ class Room(
     private var curWords: List<String>? = null
     private var drawingPlayerIndex = 0
     private var startTime = 0L
+    private var curRoundDrawData: List<String> = listOf()
 
     private var phaseChangedListener: ((Phase) -> Unit)? = null
     var phase = Phase.WAITING_FOR_PLAYERS
@@ -111,8 +112,8 @@ class Room(
         )
         sendWordToPlayer(player)
         broadcastPlayerStates()
+        sendCurRoundDrawInfoToPlayer(player)
         broadcast(gson.toJson(announcement))
-
         return player
     }
 
@@ -192,6 +193,10 @@ class Room(
         return false
     }
 
+    fun addSerializedDrawInfo(drawAction: String) {
+        curRoundDrawData = curRoundDrawData + drawAction
+    }
+
     private fun setPhaseChangedListener(listener: (Phase) -> Unit) {
         phaseChangedListener = listener
     }
@@ -245,6 +250,7 @@ class Room(
     }
 
     private fun newRound() {
+        curRoundDrawData = listOf()
         curWords = getRandomWords(3)
         val newWords = NewWords(curWords.orEmpty())
         nextDrawingPlayer()
@@ -367,6 +373,12 @@ class Room(
             }
         }
         player.socket.send(Frame.Text(gson.toJson(phaseChange)))
+    }
+
+    private suspend fun sendCurRoundDrawInfoToPlayer(player: Player) {
+        if (phase == Phase.GAME_RUNNING || phase == Phase.SHOW_WORD) {
+            player.socket.send(Frame.Text(gson.toJson(RoundDrawInfo(curRoundDrawData))))
+        }
     }
 
     private fun kill() {
