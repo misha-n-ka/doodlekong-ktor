@@ -2,7 +2,7 @@ package com.plcourse.mkirilkin.util
 
 import java.io.File
 
-val words = readWordList("resources/programmers_wordlist.txt")
+val words = readWordList("ktor-server-doodlekong/src/main/resources/programmers_words.txt")
 
 fun readWordList(fileName: String): List<String> {
     val inputStream = File(fileName).inputStream()
