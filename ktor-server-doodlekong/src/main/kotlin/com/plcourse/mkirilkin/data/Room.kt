@@ -272,6 +272,7 @@ class Room(
         winningPlayers = listOf()
         val nullSafetyPlayer = players.random()
         val wordToSend = word ?: curWords?.random() ?: words.random()
+        word = wordToSend
         val wordWithUnderscores = wordToSend.transformToUnderscores()
         val drawingUsername = (drawingPlayer ?: nullSafetyPlayer).userName
         val gameStateForDrawingPlayer = GameState(
