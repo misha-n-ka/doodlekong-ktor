@@ -94,7 +94,6 @@ class Room(
         val tmpPlayers = players.toMutableList()
         tmpPlayers.add(indexToAdd, player)
         players = tmpPlayers.toList()
-        players = players + player
 
         if (players.size == 1) { // Единственный кто зашел в команту
             phase = Phase.WAITING_FOR_PLAYERS
