@@ -328,6 +328,7 @@ class Room(
         } else {
             drawingPlayerIndex = 0
         }
+        drawingPlayer?.isDrawing = true
     }
 
     private fun isGuessCorrect(guess: ChatMessage): Boolean {
