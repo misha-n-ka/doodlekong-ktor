@@ -94,7 +94,6 @@ class Room(
         val tmpPlayers = players.toMutableList()
         tmpPlayers.add(indexToAdd, player)
         players = tmpPlayers.toList()
-        players = players + player
 
         if (players.size == 1) { // Единственный кто зашел в команту
             phase = Phase.WAITING_FOR_PLAYERS
@@ -221,7 +220,7 @@ class Room(
                 delay(UPDATE_TIME_FREQUENCY)
             }
             phase = when (phase) {
-                Phase.WAITING_FOR_PLAYERS -> Phase.NEW_ROUND
+                Phase.WAITING_FOR_START -> Phase.NEW_ROUND
                 Phase.GAME_RUNNING -> {
                     finishOffDrawing()
                     Phase.SHOW_WORD
@@ -273,6 +272,7 @@ class Room(
         winningPlayers = listOf()
         val nullSafetyPlayer = players.random()
         val wordToSend = word ?: curWords?.random() ?: words.random()
+        word = wordToSend
         val wordWithUnderscores = wordToSend.transformToUnderscores()
         val drawingUsername = (drawingPlayer ?: nullSafetyPlayer).userName
         val gameStateForDrawingPlayer = GameState(
@@ -328,6 +328,7 @@ class Room(
         } else {
             drawingPlayerIndex = 0
         }
+        drawingPlayer?.isDrawing = true
     }
 
     private fun isGuessCorrect(guess: ChatMessage): Boolean {
