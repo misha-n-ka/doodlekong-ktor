@@ -221,7 +221,7 @@ class Room(
                 delay(UPDATE_TIME_FREQUENCY)
             }
             phase = when (phase) {
-                Phase.WAITING_FOR_PLAYERS -> Phase.NEW_ROUND
+                Phase.WAITING_FOR_START -> Phase.NEW_ROUND
                 Phase.GAME_RUNNING -> {
                     finishOffDrawing()
                     Phase.SHOW_WORD
